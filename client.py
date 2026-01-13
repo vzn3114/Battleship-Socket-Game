@@ -29,6 +29,35 @@ class BattleshipClient:
         # Lock cho việc in ra màn hình
         self.print_lock = threading.Lock()
     
+    def display_opponent_board(self):
+        """Hiển thị bảng bắn đối thủ"""
+        print("\n=== BẢNG BẮN ĐỐI THỦ ===")
+        print("    " + " ".join([str(i) for i in range(10)]))
+        print("  +" + "-" * 21 + "+")
+        for i, row in enumerate(self.opponent_board):
+            print(f"{i} | " + " ".join(row) + " |")
+        print("  +" + "-" * 21 + "+")
+        print("\nKí hiệu: X=Trúng, O=Trượt, ' '=Chưa bắn")
+
+    def display_boards(self):
+        """Hiển thị cả 2 bảng"""
+        print("\n" + "="*60)
+        print(f"  BẠN: {self.username}  vs  ĐỐI THỦ: {self.opponent_name}")
+        print("="*60)
+        
+        # In 2 bảng cạnh nhau
+        print("\n   BẢN ĐỒ CỦA BẠN              BẢN ĐỒ BẮN ĐỐI THỦ")
+        print("    " + " ".join([str(i) for i in range(10)]) + "          " + " ".join([str(i) for i in range(10)]))
+        print("  +" + "-" * 21 + "+      +" + "-" * 21 + "+")
+        
+        for i in range(10):
+            my_row = " ".join(self.my_board[i])
+            opp_row = " ".join(self.opponent_board[i])
+            print(f"{i} | {my_row} |    {i} | {opp_row} |")
+        
+        print("  +" + "-" * 21 + "+      +" + "-" * 21 + "+")
+        print("\nKí hiệu: ■=Tàu của bạn, X=Trúng, O=Trượt")
+
     def connect(self):
         """Kết nối đến server"""
         try:

@@ -134,6 +134,53 @@ class BattleshipGUI:
                                       state=tk.DISABLED)
         self.direction_btn.pack(pady=5)
     
+    def handle_result(self, data):
+        """Xử lý kết quả bắn"""
+        parts = data.split('|')
+        result_type = parts[0]
+        coords = parts[1].split(',')
+        x, y = int(coords[0]), int(coords[1])
+        
+        if result_type == "HIT":
+            self.opponent_buttons[y][x].config(bg="#e74c3c", text="💥")
+            self.opponent_board[y][x] = 'X'
+            messagebox.showinfo("Kết quả", "🎯 TRÚNG! Bắn tiếp!")
+        else:
+            self.opponent_buttons[y][x].config(bg="#7f8c8d", text="○")
+            self.opponent_board[y][x] = 'O'
+            messagebox.showinfo("Kết quả", "💨 TRƯỢT!")
+        
+        if result_type != "HIT":
+            self.status_label.config(text="⏳ Đợi đối thủ đánh...")
+    
+    def handle_opponent_shoot(self, data):
+        """Xử lý khi đối thủ bắn"""
+        parts = data.split('|')
+        result_type = parts[0]
+        coords = parts[1].split(',')
+        x, y = int(coords[0]), int(coords[1])
+        
+        if result_type == "HIT":
+            self.my_buttons[y][x].config(bg="#e74c3c", text="💥")
+            self.my_board[y][x] = 'X'
+        else:
+            self.my_buttons[y][x].config(bg="#7f8c8d", text="○")
+            self.my_board[y][x] = 'O'
+    
+    def handle_game_over(self, data):
+        """Xử lý game over"""
+        self.game_over = True
+        
+        if data == "WIN":
+            messagebox.showinfo("GAME OVER", "🎉 CHÚC MỪNG! BẠN THẮNG! 🎉")
+            self.status_label.config(text="🏆 BẠN THẮNG!")
+        else:
+            messagebox.showinfo("GAME OVER", "😢 BẠN THUA! Chúc bạn may mắn lần sau!")
+            self.status_label.config(text="😢 BẠN THUA!")
+        
+        # Đóng sau 3 giây
+        self.root.after(3000, self.root.destroy)
+
     def my_cell_click(self, x, y):
         """Xử lý click vào bảng của mình (setup)"""
         if not self.setup_mode:
@@ -281,6 +328,7 @@ class BattleshipGUI:
                 self.is_my_turn = True
                 self.status_label.config(text="🎯 ĐẾN LƯỢT BẠN! Click vào bảng đối thủ để bắn")
             else:
+                self.is_my_turn = False
                 self.status_label.config(text="⏳ Đợi đối thủ đánh...")
         
         elif command == "RESULT":
