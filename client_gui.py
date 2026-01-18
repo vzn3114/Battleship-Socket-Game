@@ -1,6 +1,6 @@
 """
-Client Battleship Game - Giao diện GUI với Tkinter
-Trải nghiệm tốt hơn với click chuột
+Client Battleship Game - Giao diện GUI với Tkinter (Resizable)
+Trải nghiệm tốt hơn với click chuột - CÓ THỂ THAY ĐỔI KÍCH THƯỚC
 """
 import socket
 import threading
@@ -42,21 +42,63 @@ class BattleshipGUI:
         # GUI
         self.root = tk.Tk()
         self.root.title("🚢 Battleship Game")
-        self.root.geometry("1200x700")
-        self.root.resizable(False, False)
+        self.root.geometry("1400x800")  # Kích thước ban đầu lớn hơn
+        self.root.minsize(1000, 600)    # Kích thước tối thiểu
+        self.root.resizable(True, True)  # ⭐ CHO PHÉP RESIZE
         
         self.my_buttons = []
         self.opponent_buttons = []
         
+        # Variables để lưu widgets cần update khi resize
+        self.button_width = 4
+        self.button_height = 2
+        
         self.create_gui()
+        
+        # Bind sự kiện resize
+        self.root.bind('<Configure>', self.on_window_resize)
+    
+    def on_window_resize(self, event):
+        """Xử lý khi cửa sổ thay đổi kích thước"""
+        # Chỉ xử lý khi resize cửa sổ chính (không phải widget con)
+        if event.widget == self.root:
+            # Tính toán kích thước button mới dựa trên kích thước cửa sổ
+            window_width = self.root.winfo_width()
+            window_height = self.root.winfo_height()
+            
+            # Tính width và height cho button (chia đều không gian)
+            # Trừ đi padding và space cho labels
+            available_width = (window_width - 100) // 2  # Chia đôi cho 2 bảng
+            available_height = window_height - 250       # Trừ header và controls
+            
+            # Tính kích thước button
+            new_width = max(3, min(8, available_width // 60))
+            new_height = max(1, min(3, available_height // 200))
+            
+            if new_width != self.button_width or new_height != self.button_height:
+                self.button_width = new_width
+                self.button_height = new_height
+                self.update_button_sizes()
+    
+    def update_button_sizes(self):
+        """Cập nhật kích thước tất cả buttons"""
+        # Update my board buttons
+        for row in self.my_buttons:
+            for btn in row:
+                btn.config(width=self.button_width, height=self.button_height)
+        
+        # Update opponent board buttons
+        for row in self.opponent_buttons:
+            for btn in row:
+                btn.config(width=self.button_width, height=self.button_height)
     
     def create_gui(self):
-        """Tạo giao diện"""
-        # Main container
+        """Tạo giao diện - RESPONSIVE DESIGN"""
+        # Main container - sử dụng pack với fill và expand
         main_frame = tk.Frame(self.root, bg="#2c3e50")
         main_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
         
-        # Title
+        # ==================== HEADER ====================
         title_frame = tk.Frame(main_frame, bg="#2c3e50")
         title_frame.pack(fill=tk.X, pady=(0, 10))
         
@@ -69,70 +111,126 @@ class BattleshipGUI:
                                      font=("Arial", 12), bg="#2c3e50", fg="#ecf0f1")
         self.status_label.pack()
         
-        # Game boards container
-        boards_frame = tk.Frame(main_frame, bg="#2c3e50")
-        boards_frame.pack(fill=tk.BOTH, expand=True)
+        # ==================== GAME BOARDS ====================
+        # Sử dụng PanedWindow để cho phép resize giữa 2 bảng
+        boards_paned = tk.PanedWindow(main_frame, orient=tk.HORIZONTAL, 
+                                      bg="#2c3e50", sashwidth=5, 
+                                      sashrelief=tk.RAISED)
+        boards_paned.pack(fill=tk.BOTH, expand=True)
         
-        # Left board (My board)
-        left_frame = tk.Frame(boards_frame, bg="#34495e", relief=tk.RAISED, bd=2)
-        left_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(0, 5))
+        # Left board (My board) - Frame với scrollbar nếu cần
+        left_frame = tk.Frame(boards_paned, bg="#34495e", relief=tk.RAISED, bd=2)
+        boards_paned.add(left_frame, stretch="always")
         
         self.my_board_label = tk.Label(left_frame, text="BẢNG CỦA BẠN", 
-                                       font=("Arial", 16, "bold"), bg="#34495e", fg="white")
+                                       font=("Arial", 16, "bold"), 
+                                       bg="#34495e", fg="white")
         self.my_board_label.pack(pady=10)
         
-        my_grid = tk.Frame(left_frame, bg="#34495e")
-        my_grid.pack(pady=10)
+        # Container cho grid với khả năng center
+        my_grid_container = tk.Frame(left_frame, bg="#34495e")
+        my_grid_container.pack(fill=tk.BOTH, expand=True, pady=10)
         
-        # Create my board
+        my_grid = tk.Frame(my_grid_container, bg="#34495e")
+        my_grid.place(relx=0.5, rely=0.5, anchor=tk.CENTER)
+        
+        # Create my board với grid
         for i in range(10):
             row_buttons = []
             for j in range(10):
-                btn = tk.Button(my_grid, text="", width=5, height=2,
+                btn = tk.Button(my_grid, text="", 
+                               width=self.button_width, 
+                               height=self.button_height,
                                bg="#3498db", fg="white",
                                font=("Arial", 10, "bold"),
                                command=lambda x=j, y=i: self.my_cell_click(x, y))
-                btn.grid(row=i, column=j, padx=1, pady=1)
+                btn.grid(row=i, column=j, padx=1, pady=1, sticky="nsew")
                 row_buttons.append(btn)
             self.my_buttons.append(row_buttons)
         
+        # Configure grid weights để buttons scale đều
+        for i in range(10):
+            my_grid.grid_rowconfigure(i, weight=1)
+            my_grid.grid_columnconfigure(i, weight=1)
+        
         # Right board (Opponent board)
-        right_frame = tk.Frame(boards_frame, bg="#34495e", relief=tk.RAISED, bd=2)
-        right_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True, padx=(5, 0))
+        right_frame = tk.Frame(boards_paned, bg="#34495e", relief=tk.RAISED, bd=2)
+        boards_paned.add(right_frame, stretch="always")
         
         self.opp_board_label = tk.Label(right_frame, text="BẢNG ĐỐI THỦ", 
-                                        font=("Arial", 16, "bold"), bg="#34495e", fg="white")
+                                        font=("Arial", 16, "bold"), 
+                                        bg="#34495e", fg="white")
         self.opp_board_label.pack(pady=10)
         
-        opp_grid = tk.Frame(right_frame, bg="#34495e")
-        opp_grid.pack(pady=10)
+        # Container cho opponent grid
+        opp_grid_container = tk.Frame(right_frame, bg="#34495e")
+        opp_grid_container.pack(fill=tk.BOTH, expand=True, pady=10)
+        
+        opp_grid = tk.Frame(opp_grid_container, bg="#34495e")
+        opp_grid.place(relx=0.5, rely=0.5, anchor=tk.CENTER)
         
         # Create opponent board
         for i in range(10):
             row_buttons = []
             for j in range(10):
-                btn = tk.Button(opp_grid, text="", width=5, height=2,
+                btn = tk.Button(opp_grid, text="", 
+                               width=self.button_width, 
+                               height=self.button_height,
                                bg="#95a5a6", fg="white",
                                font=("Arial", 10, "bold"),
                                command=lambda x=j, y=i: self.opponent_cell_click(x, y))
-                btn.grid(row=i, column=j, padx=1, pady=1)
+                btn.grid(row=i, column=j, padx=1, pady=1, sticky="nsew")
                 row_buttons.append(btn)
             self.opponent_buttons.append(row_buttons)
         
-        # Control panel
-        control_frame = tk.Frame(main_frame, bg="#2c3e50")
+        # Configure grid weights
+        for i in range(10):
+            opp_grid.grid_rowconfigure(i, weight=1)
+            opp_grid.grid_columnconfigure(i, weight=1)
+        
+        # ==================== CONTROL PANEL ====================
+        control_frame = tk.Frame(main_frame, bg="#2c3e50", height=100)
         control_frame.pack(fill=tk.X, pady=(10, 0))
+        control_frame.pack_propagate(False)  # Giữ height cố định
         
         self.ship_info_label = tk.Label(control_frame, text="", 
                                         font=("Arial", 12, "bold"), 
                                         bg="#2c3e50", fg="#f39c12")
-        self.ship_info_label.pack()
+        self.ship_info_label.pack(pady=5)
         
-        self.direction_btn = tk.Button(control_frame, text="🔄 Đổi hướng (Ngang ↔️ Dọc)", 
+        # Button frame cho các nút điều khiển
+        button_frame = tk.Frame(control_frame, bg="#2c3e50")
+        button_frame.pack(pady=5)
+        
+        self.direction_btn = tk.Button(button_frame, 
+                                      text="🔄 Đổi hướng (Ngang ↔️ Dọc)", 
                                       command=self.toggle_direction,
-                                      font=("Arial", 10), bg="#e74c3c", fg="white",
+                                      font=("Arial", 10, "bold"), 
+                                      bg="#e74c3c", fg="white",
+                                      padx=20, pady=10,
                                       state=tk.DISABLED)
-        self.direction_btn.pack(pady=5)
+        self.direction_btn.pack(side=tk.LEFT, padx=5)
+        
+        # Thêm nút fullscreen toggle
+        self.fullscreen_btn = tk.Button(button_frame,
+                                       text="⛶ Toàn màn hình",
+                                       command=self.toggle_fullscreen,
+                                       font=("Arial", 10, "bold"),
+                                       bg="#3498db", fg="white",
+                                       padx=20, pady=10)
+        self.fullscreen_btn.pack(side=tk.LEFT, padx=5)
+        
+        self.is_fullscreen = False
+    
+    def toggle_fullscreen(self):
+        """Chuyển đổi chế độ toàn màn hình"""
+        self.is_fullscreen = not self.is_fullscreen
+        self.root.attributes('-fullscreen', self.is_fullscreen)
+        
+        if self.is_fullscreen:
+            self.fullscreen_btn.config(text="⛶ Thoát toàn màn hình")
+        else:
+            self.fullscreen_btn.config(text="⛶ Toàn màn hình")
     
     def handle_result(self, data):
         """Xử lý kết quả bắn"""
